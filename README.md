@@ -28,9 +28,13 @@ Only your laptop's built-in camera and microphone, with no extra hardware.
 
 ```sh
 uv tool install git+https://github.com/tashfeenahmed/magictap   # installs the `magictap` command
-magictap setup      # checks your Mac, then eye calibration (~6 min) and tap training (~2 min)
+magictap setup      # checks your laptop, eye calibration (~6 min), tap training (~2 min), re-centre (15 s)
 magictap buttons    # try it: look at a button and tap the screen on it
 ```
+
+**Each new session** (different seat, lid angle or lighting), run `magictap recenter`
+first: 15 seconds, 6 dots. It removes the drift between sessions and is the single
+biggest accuracy boost (see [Results](#results-so-far-one-user-not-a-controlled-study)).
 
 Don't have `uv`? Install it with `curl -LsSf https://astral.sh/uv/install.sh | sh`
 ([docs](https://docs.astral.sh/uv/)).
@@ -46,6 +50,7 @@ calibration and models are stored in `~/Library/Application Support/MagicTap`
 git clone https://github.com/tashfeenahmed/magictap && cd magictap
 uv sync
 uv run magictap setup
+uv run magictap recenter   # at the start of each session
 uv run magictap buttons
 ```
 
@@ -65,14 +70,16 @@ uv run magictap buttons
 
 | Command | What it does |
 |---|---|
-| `magictap setup` | Guided first run: `doctor`, then `calibrate`, then `taps` |
+| `magictap setup` | Guided first run: `doctor`, then `calibrate`, `taps` and `recenter` |
+| `magictap recenter` | **Start of every session (15 s):** look at and touch 6 dots; corrects drift from seating, lid angle and light |
 | `magictap doctor` | Checks camera, mic, permissions, models and calibration |
-| `magictap calibrate` | Eye calibration, plus touch rounds on a grid. Picks the finest grid that works reliably for you |
+| `magictap calibrate` | Eye calibration, plus touch rounds on a grid. The eye mapping is trained on all your past calibrations together |
 | `magictap taps` | Teaches it your screen taps vs. typing, talking and noise |
 | `magictap buttons` | Big on-screen buttons with right/wrong feedback. Guided mode keeps learning as you use it |
 | `magictap mouse` | Use it in **any app**: tap the screen and it clicks where you're looking |
 | `magictap serve` | Local WebSocket service for **your app** (see below) |
 | `magictap preview` | Camera view with the face and eye overlay, for checking framing |
+| `magictap evaluate-demo` | Offline accuracy on a recording from `magictap record-demo` (with and without re-centre) |
 
 ## Integrate it
 
@@ -140,8 +147,11 @@ Any language with WebSockets works the same way, including Swift's
 - **Where: your eyes.**
   1. MediaPipe face mesh, with the face normalised for head pose.
   2. ETH-XGaze gaze estimation (ResNet-18).
-  3. A per-user mapping to screen points, learned during calibration.
-  4. While you touch the screen your gaze reads slightly high; Magic Tap learns that
+  3. A per-user mapping to screen points, trained on **all** your calibration sessions
+     together, so it isn't tied to one day's posture or light.
+  4. A 15-second **re-centre** per session fits an affine correction for today's
+     seating, lid angle and lighting.
+  5. While you touch the screen your gaze reads slightly high; Magic Tap learns that
      shift and subtracts it.
 - **When: the tap sound.**
   1. 3 ms onset detection against an adaptive noise floor, with clips aligned to the
@@ -149,8 +159,9 @@ Any language with WebSockets works the same way, including Swift's
   2. A classifier trained on your taps vs. your everyday noises.
   3. An "unusual sound" check.
   4. Sounds within 150 ms of a key or trackpad press are ignored.
-- **Fusion:** a tap is placed where your eyes were in the 0.3 s before it. If the
-  gaze doesn't clearly agree, Magic Tap doesn't click.
+- **Fusion:** a tap is placed where your eyes last **settled** (a fixation) in the
+  0.8 s before it, which skips the glance from the previous button. If fewer than 60%
+  of those gaze samples agree on a button, Magic Tap says "not sure" instead of clicking.
 
 [CONFIGURATION.md](CONFIGURATION.md) has the exact settings and what we learned
 building it.
@@ -159,19 +170,29 @@ building it.
 
 | | |
 |---|---|
-| Gaze error on held-out dots | 83 pt median |
+| **Right button on a 3×2 grid, new session, after a 6-dot re-centre** | **18 / 18 (100 %)** on held-out presses |
+| Same, without the re-centre | 11 / 24 (46 %) |
+| Gaze error on a session it never saw (3 sessions, leave-one-out, after re-centre) | 148 pt median |
 | Taps detected | 91–95 % |
 | False taps from typing, talking, knocks and music | 0 of 73 |
-| Live accuracy on a 3×2 grid of buttons | 81 % (26/32), before the latest fixes |
 
-It's good for a handful of large buttons, not precise pointing. Accuracy depends on
-calibrating in the posture, lid angle and lighting you'll use it in.
+How the 18/18 was measured: an offline evaluation of a recorded session from a
+different day than any calibration. The first press of each of the 6 cells
+stood in for `magictap recenter`, and the other 18 presses were scored with
+nothing from them used in fitting. Reproduce it with `magictap evaluate-demo`.
+
+Caveats: it's a small sample from one person (the 95 % confidence interval for 18/18
+starts at about 81 %), it's offline rather than live, and the presses were finger
+rests rather than heard taps. Live validation with `magictap buttons` after a
+re-centre is next. Magic Tap is built for a handful of large buttons, not precise
+pointing.
 
 ## Troubleshooting
 
 - **Nothing happens / it never says "ready":** run `magictap doctor`. Camera and
   Microphone must be allowed for the app you run it from (Terminal, iTerm, VS Code…).
-- **Wrong button:** recalibrate in the position you actually use. Keep text and camera
+- **Wrong button:** run `magictap recenter` (15 s); that fixes most of it. If it keeps
+  happening, recalibrate in the position you actually use. Keep text and camera
   previews out of the middle of the screen while calibrating; anything readable pulls
   your eyes away from the dots.
 - **Taps not heard, or heard when you didn't tap:** run `magictap taps` again in the room

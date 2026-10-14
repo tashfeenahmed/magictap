@@ -1,8 +1,11 @@
-"""Pure logic shared by `magictap serve` and `magictap mouse` (no camera, mic or sockets).
+"""Pure logic shared by `magictap serve`, `magictap mouse` and the button board (no camera, mic or sockets).
 
-A tap at time t0 is placed at the median gaze point over [t0 - 0.30 s, t0 + 0.05 s]
-(gaze settles on the target before the finger lands; earlier frames still hold
-the previous target). Registered targets are hit-tested against that point.
+A tap at time t0 is placed where the eyes last *settled* before it: walking back
+from the tap over [t0 - 0.8 s, t0 + 0.05 s], the most recent stable run of gaze
+samples (a fixation). That skips the saccade from the previous target, which a
+fixed window can still contain. If there's no clear fixation, it falls back to
+[t0 - 0.30 s, t0 + 0.05 s]. Registered targets are hit-tested against the
+median of those samples.
 """
 
 import json
@@ -11,8 +14,42 @@ from collections import deque
 import numpy as np
 
 TAP_WINDOW = (-0.30, 0.05)
+FIXATION_LOOKBACK = 0.8  # seconds before the tap searched for a fixation
+FIXATION_TOL = 60.0  # points: samples within this of the run's median belong to it
+FIXATION_MIN = 4  # samples (~0.13 s at 30 fps) for a run to count as a fixation
 MIN_SAMPLES = 2
+MIN_CONFIDENCE = 0.6  # below this, say "not sure" instead of clicking
 OFFSCREEN_MARGIN = 100  # points
+
+
+def select_fixation(items, t0, lookback=FIXATION_LOOKBACK, after=TAP_WINDOW[1], tol=FIXATION_TOL,
+                    min_len=FIXATION_MIN, fallback=TAP_WINDOW):
+    """Gaze samples from the most recent fixation before t0.
+
+    items: iterable of (t, (x, y) or None). Walk back from the tap, growing the newest
+    run of samples while each one stays within `tol` of the run's median; the first run
+    with at least `min_len` samples is the fixation. Falls back to the fixed window.
+    """
+    items = [(t, xy) for t, xy in items if xy is not None]
+    pts = [xy for t, xy in items if t0 - lookback <= t <= t0 + after]
+    i = len(pts)
+    P = np.array(pts, float) if pts else np.zeros((0, 2))
+    while i > 0:
+        j = i - 1
+        while j > 0 and np.hypot(*(P[j - 1] - np.median(P[j - 1:i], axis=0))) < tol:
+            j -= 1
+        if i - j >= min_len:
+            return [tuple(p) for p in P[j:i]]
+        i = j
+    return [xy for t, xy in items if t0 + fallback[0] <= t <= t0 + fallback[1]]
+
+
+def vote(cells):
+    """Most common cell and the share of samples that agree with it."""
+    if not cells:
+        return None, 0.0
+    win = max(set(cells), key=cells.count)
+    return win, cells.count(win) / len(cells)
 
 
 class GazeBuffer:
@@ -29,6 +66,9 @@ class GazeBuffer:
 
     def window(self, t0, window=TAP_WINDOW):
         return [xy for t, xy in self.items if xy is not None and t0 + window[0] <= t <= t0 + window[1]]
+
+    def fixation(self, t0):
+        return select_fixation(self.items, t0)
 
     def latest(self):
         for t, xy in reversed(self.items):

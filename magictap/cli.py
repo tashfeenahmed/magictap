@@ -8,9 +8,9 @@ from . import __version__
 def main():
     p = argparse.ArgumentParser(
         prog="magictap",
-        description="Magic Tap: touch input for a MacBook screen with no touchscreen. "
+        description="Magic Tap: touch input for a laptop screen with no touchscreen. "
                     "Your eyes pick the button, the sound of your tap says when.",
-        epilog="First time? Run `magictap setup`, then `magictap buttons`.")
+        epilog="First time? Run `magictap setup`, then `magictap buttons`. New session? `magictap recenter` (15 s).")
     p.add_argument("--version", action="version", version=f"magictap {__version__}")
     sub = p.add_subparsers(dest="cmd", required=True, metavar="<command>")
 
@@ -27,6 +27,9 @@ def main():
     sp.add_argument("--rounds", type=int, default=3, help="cells mode: touches per cell")
     sp.add_argument("--touch-samples", type=int, default=2, help="point mode: captures per touch dot")
     sp.add_argument("--auto", action="store_true", help="point mode: also record when you hold still")
+    sp = sub.add_parser("recenter", help="15-second re-centre at the start of a session (removes calibration drift)")
+    sp.add_argument("--camera", type=int)
+    sp.add_argument("--seed", type=int)
     sp = sub.add_parser("taps", help="teach Magic Tap your screen taps vs. typing, talking and noise (~2 min)")
     sp.add_argument("--seed", type=int)
     sp.add_argument("--retrain", action="store_true", help="retrain from the last saved tap recording instead")
@@ -37,7 +40,7 @@ def main():
     sp.add_argument("--seed", type=int)
     sp = sub.add_parser("mouse", help="use it in any app: tap the screen to click where you look (needs Accessibility)")
     sp.add_argument("--camera", type=int)
-    sp.add_argument("--min-confidence", type=float, default=0.5)
+    sp.add_argument("--min-confidence", type=float, default=0.6)
     sp = sub.add_parser("serve", help="integrate it: local WebSocket service for apps (ws://127.0.0.1:8765)")
     sp.add_argument("--camera", type=int)
     sp.add_argument("--host", default="127.0.0.1")
@@ -58,6 +61,8 @@ def main():
     sp.add_argument("--radius", type=int, help="target radius in points (default: from calibration accuracy)")
     sp.add_argument("--seed", type=int)
     sp.add_argument("--reps", type=int, default=2, help="cells mode: times each cell is tested")
+    sp = sub.add_parser("evaluate-demo", help="offline accuracy on a recorded demo session (with/without re-centre)")
+    sp.add_argument("run", nargs="?", help="demo_runs/<time> folder (latest by default)")
     sp = sub.add_parser("record-demo", help="guided session that records the camera and press times for a demo video")
     sp.add_argument("--camera", type=int)
     sp.add_argument("--taps", type=int, default=24)
@@ -82,6 +87,14 @@ def main():
             from .calibration import run_calibration
 
             run_calibration(args.camera, args.seed, args.auto, args.touch_samples)
+    elif args.cmd == "recenter":
+        from .recenter import run_recenter
+
+        run_recenter(args.camera, args.seed)
+    elif args.cmd == "evaluate-demo":
+        from .evaluate import run_evaluate_demo
+
+        run_evaluate_demo(args.run)
     elif args.cmd == "taps":
         from .tapcal import retrain_taps, run_tap_calibration
 

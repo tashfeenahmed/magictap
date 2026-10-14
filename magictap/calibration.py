@@ -546,6 +546,7 @@ def _show_summary(app, r, lines):
 # --------------------------------------------------------------------------
 
 EVAL_GRIDS = [(4, 3), (3, 3), (3, 2), (2, 2)]
+MAX_DEFAULT_CELLS = 6  # 3x2
 
 
 def run_cell_calibration(camera=None, cols=4, rows=3, rounds=3, seed=None):
@@ -630,10 +631,17 @@ def run_cell_calibration(camera=None, cols=4, rows=3, rounds=3, seed=None):
 def train_cells(gaze_train, gaze_check, X, T, captures, rounds, rest_X, hold_m, reach_m, canvas_size, grid,
                 progress=lambda s: None):
     """Fit the eye mapper and cell models for several grid sizes; save and return the finest reliable one."""
-    from .model import CellModel, fit_gaze_mapper
+    from .model import CellModel, fit_gaze_mapper, fit_gaze_mapper_pooled, load_gaze_sessions
 
     cols, rows = grid
-    mapper, mapper_name, eye_score, eye_candidates = fit_gaze_mapper(gaze_train, gaze_check, canvas_size, progress)
+    # Pool every stored eye calibration (this one included) so the mapping holds up across sessions;
+    # fall back to this session alone when it's the first.
+    pooled = fit_gaze_mapper_pooled(load_gaze_sessions(RUNS_DIR), canvas_size, progress)
+    if pooled:
+        mapper, mapper_name, eye_score, eye_candidates = pooled
+        mapper_name = f"{mapper_name} (pooled, {eye_score['sessions']} sessions)"
+    else:
+        mapper, mapper_name, eye_score, eye_candidates = fit_gaze_mapper(gaze_train, gaze_check, canvas_size, progress)
     grids = [g for g in EVAL_GRIDS if g[0] <= cols and g[1] <= rows]
     reports, models = {}, {}
     for gc, gr in grids:
@@ -641,10 +649,13 @@ def train_cells(gaze_train, gaze_check, X, T, captures, rounds, rest_X, hold_m, 
         m.fit(mapper, X, T, captures, rounds, rest_X, hold_m, reach_m,
               progress=lambda s, g=(gc, gr): progress(f"{g[0]}x{g[1]} grid: {s}"))
         reports[f"{gc}x{gr}"], models[(gc, gr)] = m.report, m
-    reliable = [g for g in grids if (reports[f"{g[0]}x{g[1]}"]["accepted_accuracy"] or 0) >= 0.95
+    # Only grids up to 3x2 are eligible by default: finer grids can look reliable on touch rounds from
+    # the same session, but 3x2 is what holds up on a new session (see `magictap evaluate-demo`).
+    eligible = [g for g in grids if g[0] * g[1] <= MAX_DEFAULT_CELLS] or grids
+    reliable = [g for g in eligible if (reports[f"{g[0]}x{g[1]}"]["accepted_accuracy"] or 0) >= 0.95
                 and reports[f"{g[0]}x{g[1]}"]["accepted_rate"] >= 0.8]
     chosen = max(reliable, key=lambda g: g[0] * g[1]) if reliable else max(
-        grids, key=lambda g: (reports[f"{g[0]}x{g[1]}"]["accuracy"], g[0] * g[1]))
+        eligible, key=lambda g: (reports[f"{g[0]}x{g[1]}"]["accuracy"], g[0] * g[1]))
     model = models[chosen]
     model.save()
     report = {"mode": "cells", "chosen_grid": list(chosen), "reliable": bool(reliable), "grids": reports,
@@ -676,7 +687,9 @@ def retrain(run_dir):
 
 def cell_report_lines(report):
     e = report["eyes"]["check_dots"]
-    lines = [f"Eyes on check dots: median {e['median']:.0f} pt, 3x3 cell right {100 * e['region']:.0f}% of the time",
+    where = (f"on sessions it never saw ({e['sessions']} pooled), after re-centre" if "sessions" in e
+             else "on check dots")
+    lines = [f"Eyes {where}: median {e['median']:.0f} pt, 3x3 cell right {100 * e['region']:.0f}% of the time",
              "Which cell you touched (each round predicted by a model that never saw it):"]
     for name, r in report["grids"].items():
         acc = r["accepted_accuracy"]
@@ -686,7 +699,7 @@ def cell_report_lines(report):
     best = report["grids"][f"{report['chosen_grid'][0]}x{report['chosen_grid'][1]}"]
     lines.append(f"Touching vs. not touching recognised {100 * best['touch_vs_rest_accuracy']:.0f}% of the time")
     g = f"{report['chosen_grid'][0]}x{report['chosen_grid'][1]}"
-    lines.append(f"Using the {g} grid (finest grid that's >=95% right on >=80% of touches)." if report["reliable"]
+    lines.append(f"Using the {g} grid (finest grid up to 3x2 that's >=95% right on >=80% of touches)." if report["reliable"]
                  else f"No grid reached >=95% on >=80% of touches yet; using the most accurate one ({g}).")
     return lines
 

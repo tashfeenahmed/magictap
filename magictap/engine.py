@@ -13,6 +13,7 @@ from .config import CAMERA_HEIGHT, CAMERA_NAME, CAMERA_WIDTH
 from .fusion import GazeBuffer, to_global
 from .gaze import GazeEstimator
 from .model import CellModel
+from .recenter import apply_correction, correction_hint, load_correction
 from .tapcal import TapDetector
 
 
@@ -28,6 +29,10 @@ class Engine:
             if camera is None else camera
         self.on_tap, self.on_ignored, self.on_gaze = on_tap, on_ignored, on_gaze
         self.gaze = GazeBuffer()
+        self.correction, _ = load_correction()  # session re-centre (affine), applied to every gaze point
+        hint = correction_hint()
+        if hint:
+            print(hint, flush=True)
         self._stop = threading.Event()
         self.ready = threading.Event()  # set once the first camera frame has been processed
         self._thread = None
@@ -64,6 +69,7 @@ class Engine:
                 xy = None
                 if g is not None and not g.blink:
                     canvas_xy = self.model.gaze.predict(g.features[None])[0] + self.model.offset
+                    canvas_xy = apply_correction(self.correction, canvas_xy)
                     xy = to_global(canvas_xy, self.calib.canvas_offset)
                 self.gaze.add(t, xy)
                 if not self.ready.is_set():
@@ -80,7 +86,7 @@ class Engine:
                 for tt in [p for p in pending if now >= p + 0.06]:
                     pending.remove(tt)
                     if self.on_tap:
-                        self.on_tap(tt, self.gaze.window(tt))
+                        self.on_tap(tt, self.gaze.fixation(tt))
         finally:
             taps.close()
             est.close()

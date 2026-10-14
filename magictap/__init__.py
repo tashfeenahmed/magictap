@@ -1,4 +1,4 @@
-"""Magic Tap: touch input for a MacBook screen using gaze and the sound of a tap."""
+"""Magic Tap: touch input for a laptop screen using gaze and the sound of a tap."""
 
 __version__ = "0.2.0"
 

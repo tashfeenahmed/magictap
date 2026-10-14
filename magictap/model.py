@@ -476,3 +476,81 @@ def fit_gaze_mapper(gaze_train, gaze_check, canvas_size, progress=lambda s: None
     best = min(scores, key=lambda n: scores[n]["median"])
     mapper = GAZE_CANDIDATES[best]().fit(np.vstack([Xg, Xv]), np.vstack([Yg, Yv]))
     return mapper, best, scores[best], {n: round(s["median"], 1) for n, s in scores.items()}
+
+
+# --------------------------------------------------------------------------
+# Pooled gaze mapper: every stored eye calibration, judged on sessions it never saw.
+# --------------------------------------------------------------------------
+
+# Eye-image variants first: on equal scores they generalised best across sessions.
+EYE_FIRST = ["gaze ray + eye images", "gaze ray + iris + eye images", "all gaze features", "gaze ray"]
+
+
+def load_gaze_sessions(runs_dir):
+    """One entry per stored calibration with an eye-calibration step.
+
+    X/Y = look-only dots (training + check), plus the touch-round gaze of cells-mode runs
+    (those were recorded with text kept off the centre of the screen).
+    """
+    sessions = []
+    for p in sorted(runs_dir.glob("*/dataset.npz")):
+        try:
+            d = np.load(p)
+        except Exception:
+            continue
+        if "gaze_train_X" not in d.files or "gaze_check_X" not in d.files:
+            continue
+        X = [d["gaze_train_X"], d["gaze_check_X"]]
+        Y = [d["gaze_train_Y"], d["gaze_check_Y"]]
+        if "X" in d.files and "targets" in d.files:
+            g = d["X"][:, :N_GAZE]
+            ok = ~np.isnan(g[:, 0])
+            X.append(g[ok])
+            Y.append(d["targets"][ok])
+        sessions.append({"name": p.parent.name, "X": np.vstack(X), "Y": np.vstack(Y),
+                         "train": (d["gaze_train_X"], d["gaze_train_Y"], d["gaze_train_groups"]),
+                         "check": (d["gaze_check_X"], d["gaze_check_Y"], d["gaze_check_groups"])})
+    return sessions
+
+
+def _held_out_score(make, train_sessions, test, canvas_size):
+    """Fit on other sessions; re-centre on the test session's training dots; score its check dots."""
+    from .recenter import apply_correction, fit_correction
+
+    m = make().fit(np.vstack([s["X"] for s in train_sessions]), np.vstack([s["Y"] for s in train_sessions]))
+    tX, tY, tg = test["train"]
+    P = m.predict(tX)
+    groups = np.unique(tg)
+    M, _ = fit_correction([np.median(P[tg == g], axis=0) for g in groups], [tY[tg == g][0] for g in groups])
+    vX, vY, vg = test["check"]
+    Q = apply_correction(M, m.predict(vX))
+    w, h = canvas_size
+    preds = {int(g): np.clip(np.median(Q[vg == g], axis=0), 0, (w, h)) for g in np.unique(vg)}
+    truth = {int(g): vY[vg == g][0] for g in np.unique(vg)}
+    return score(preds, truth, canvas_size)
+
+
+def fit_gaze_mapper_pooled(sessions, canvas_size, progress=lambda s: None):
+    """Leave-one-session-out choice among the gaze candidates, then fit on all sessions pooled.
+
+    Returns (mapper, name, held-out score dict, {candidate: mean held-out median}) or None.
+    """
+    if len(sessions) < 2:
+        return None
+    results = {}
+    for name in EYE_FIRST:
+        progress(f"Eyes: {name}, leave-one-session-out over {len(sessions)} sessions")
+        runs = [_held_out_score(GAZE_CANDIDATES[name], [o for o in sessions if o is not s], s, canvas_size)
+                for s in sessions]
+        results[name] = {"median": float(np.mean([r["median"] for r in runs])),
+                         "p90": float(np.mean([r["p90"] for r in runs])),
+                         "region": float(np.mean([r["region"] for r in runs])),
+                         "col": float(np.mean([r["col"] for r in runs])),
+                         "row": float(np.mean([r["row"] for r in runs]))}
+    # Prefer eye-image variants when they're within 10% of the best held-out error: they carry more
+    # of the eyes' appearance and generalised better to a new, independent session.
+    floor = min(r["median"] for r in results.values())
+    best = next(n for n in EYE_FIRST if results[n]["median"] <= 1.10 * floor)
+    mapper = GAZE_CANDIDATES[best]().fit(np.vstack([s["X"] for s in sessions]), np.vstack([s["Y"] for s in sessions]))
+    eye_score = dict(results[best], sessions=len(sessions), method="held-out session, after re-centre")
+    return mapper, best, eye_score, {n: round(r["median"], 1) for n, r in results.items()}

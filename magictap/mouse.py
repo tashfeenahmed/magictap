@@ -2,7 +2,7 @@
 
 import time
 
-from .fusion import resolve_tap
+from .fusion import MIN_CONFIDENCE, resolve_tap
 
 
 def accessibility_ok() -> bool:
@@ -20,7 +20,7 @@ def click(x, y):
         time.sleep(0.02)
 
 
-def run_mouse(camera=None, min_confidence=0.5):
+def run_mouse(camera=None, min_confidence=MIN_CONFIDENCE):
     if not accessibility_ok():
         raise SystemExit("Mouse mode needs Accessibility permission to click.\n"
                          "System Settings > Privacy & Security > Accessibility: enable your terminal app, then retry.")

@@ -58,7 +58,7 @@ def run_doctor(fix_models=True):
     cams = list_cameras()
     builtin = [c for c in cams if "MacBook" in c]
     row(OK if builtin else WARN, "Built-in camera", builtin[0] if builtin else f"not found ({', '.join(cams) or 'none'})",
-        None if builtin else "Magic Tap is tuned for a MacBook's built-in camera; use --camera N to pick another")
+        None if builtin else "Magic Tap is tuned for a laptop's built-in camera; use --camera N to pick another")
 
     if fix_models:
         try:
@@ -80,6 +80,13 @@ def run_doctor(fix_models=True):
     row(OK if cal else WARN, "Eye + touch calibration", "done" if cal else "not yet", None if cal else "Run `magictap calibrate`")
     taps = TAP_MODEL_PATH.exists()
     row(OK if taps else WARN, "Tap training", "done" if taps else "not yet", None if taps else "Run `magictap taps`")
+    from .recenter import MAX_AGE_HOURS, load_correction
+
+    M, age = load_correction()
+    fresh = M is not None and age <= MAX_AGE_HOURS
+    row(OK if fresh else WARN, "Re-centre (this session)",
+        f"{age:.1f} h ago" if M is not None else "not yet",
+        None if fresh else "Run `magictap recenter` (15 s) at the start of each session")
 
     print("\nMagic Tap doctor\n")
     for ok, name, detail, fix in rows:
@@ -91,7 +98,8 @@ def run_doctor(fix_models=True):
 
 
 def run_setup(camera=None):
-    print("Magic Tap setup: 1) check your Mac  2) eye + touch calibration (~6 min)  3) tap training (~2 min)\n")
+    print("Magic Tap setup: 1) check your laptop  2) eye + touch calibration (~6 min)  3) tap training (~2 min)"
+          "  4) re-centre (15 s)\n")
     if not run_doctor():
         raise SystemExit("Fix the items marked ✗ above, then run `magictap setup` again.")
     input("Press Enter to start calibration (a fullscreen window opens and waits for Space)...")
@@ -102,4 +110,9 @@ def run_setup(camera=None):
     from .tapcal import run_tap_calibration
 
     run_tap_calibration()
-    print("\nAll set. Try it:  magictap buttons\nUse it in other apps:  magictap mouse   or   magictap serve\n")
+    input("\nPress Enter to re-centre (15 s: look at 6 dots, touch each, press Space)...")
+    from .recenter import run_recenter
+
+    run_recenter(camera)
+    print("\nAll set. Try it:  magictap buttons\nUse it in other apps:  magictap mouse   or   magictap serve\n"
+          "Each new session (new seat, light or lid angle): magictap recenter  (15 s)\n")

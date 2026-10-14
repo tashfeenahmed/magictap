@@ -16,14 +16,15 @@ import numpy as np
 from .app import App, text, wait_until_ready
 from .calibration import Calibration
 from .config import SESSIONS_DIR
+from .fusion import MIN_CONFIDENCE, select_fixation, vote
 from .model import CellModel
 from .model import joint_features
+from .recenter import apply_correction, correction_hint, load_correction
 from .tapcal import TAP_MODEL_PATH, TapDetector
 from .touch import CellTouchEngine
 
-TAP_WINDOW = (-0.3, 0.05)  # camera frames around a tap used to decide which button
-# (a longer look-back caught the eyes still on the previous button after quick taps)
-MIN_TAP_CONFIDENCE = 0.6  # below this, say "not sure" instead of risking a wrong button
+TAP_WINDOW = (-0.3, 0.05)  # fallback window around a tap when there's no clear fixation
+MIN_TAP_CONFIDENCE = MIN_CONFIDENCE  # below this, say "not sure" instead of risking a wrong button
 
 LABELS = "ABCDEFGHIJKL"
 BAR = 0  # buttons must match the calibrated cells exactly, so text is drawn over them
@@ -43,13 +44,15 @@ def run_buttons(camera=None, seed=None):
     if calib.report.get("mode") != "cells":
         raise SystemExit("Buttons need a cell calibration: run `magictap calibrate` (or `magictap retrain`).")
     model = CellModel.load()
+    correction, _ = load_correction()  # session re-centre, applied to every gaze point
+    hint = correction_hint()
     app = App(camera=calib.camera_index if camera is None else camera, window="Magic Tap - buttons")
     app.show_inset = False  # a camera view on screen would pull your eyes off the buttons
     c = app.canvas
     use_taps = TAP_MODEL_PATH.exists()
     taps = TapDetector() if use_taps else None
     engine = None if use_taps else CellTouchEngine(model)
-    frames = []  # (t, joint features, raw gaze point or None)
+    frames = []  # (t, joint features, raw gaze point or None, corrected screen point or None)
     learner = Learner(model, taps) if use_taps else None
     ignored, stages = collections.Counter(), collections.Counter()
     heard = None  # last rejected sound: (message, until)
@@ -66,17 +69,26 @@ def run_buttons(camera=None, seed=None):
     tally = {"right": 0, "wrong": 0, "not_sure": 0}
     log, result, pending = [], None, None  # result: (cell, colour, message, until)
     try:
-        wait_until_ready(app, "Button board", [
+        key = wait_until_ready(app, "Button board", [
+            *([hint + "  Press R to re-centre now."] if hint else ["Re-centred recently. Press R to re-centre again (15 s)."]),
             f"{n} big buttons ({model.cols} x {model.rows}), sized from what calibration found works best.",
             "Look at a button and TAP the screen on it: the tap sound says WHEN, your eyes say WHICH button."
             if use_taps else "Look at a button and touch it, holding still briefly.",
             "Guided: touch the button Magic Tap asks for; it marks right / wrong.",
             "Free (press F): touch any button, then press Y if Magic Tap got it right or N if not.",
-        ])
+        ], keys=(ord("r"), ord("R")))
+        if key in (ord("r"), ord("R")):
+            if taps is not None:
+                taps.close()
+            app.close()
+            from .recenter import run_recenter
+
+            run_recenter(camera)
+            return run_buttons(camera, seed)
         while True:
             obs = app.step()
             if use_taps:
-                cf, events = _tap_step(obs, model, taps, frames, c)
+                cf, events = _tap_step(obs, model, taps, frames, c, correction)
                 for msg in [e[3] for e in events if e[0] == "ignored"]:
                     heard = (msg, obs.t + 1.2)
                     ignored[msg] += 1
@@ -168,32 +180,33 @@ class _Live:
         self.state, self.cell, self.p_touch = state, cell, p_touch
 
 
-def _tap_step(obs, model, taps, frames, canvas):
-    """Keep recent frames; turn accepted taps into button presses using the eyes around the tap."""
+def _tap_step(obs, model, taps, frames, canvas, correction=None):
+    """Keep recent frames; turn accepted taps into button presses using where the eyes settled."""
     g = obs.gaze.features if obs.gaze is not None and not obs.gaze.blink else None
     raw = model.gaze.predict(g[None])[0] if g is not None else None  # before the touch-shift correction
-    frames.append((obs.t, joint_features(g, obs.features), raw))
+    point = apply_correction(correction, raw + model.offset) if raw is not None else None
+    frames.append((obs.t, joint_features(g, obs.features), raw, point))
     while frames and obs.t - frames[0][0] > 2.0:
         frames.pop(0)
-    recent = [xy for t, _, xy in frames if xy is not None and obs.t - t < 0.3]
-    live_cell = model.cell_of(np.median(recent, axis=0) + model.offset) if recent else None
+    recent = [p for t, _, _, p in frames if p is not None and obs.t - t < 0.3]
+    live_cell = model.cell_of(np.median(recent, axis=0)) if recent else None
 
     events = []
     for t, accepted, score, reason, feat in taps.poll():
         if not accepted:
             events.append(("ignored", None, score, reason))
             continue
-        win = [(f, xy) for ft, f, xy in frames if t + TAP_WINDOW[0] <= ft <= t + TAP_WINDOW[1]]
-        looks = [xy for _, xy in win if xy is not None]
+        looks = select_fixation([(ft, p) for ft, _, _, p in frames], t)
         if len(looks) < 2:
             events.append(("ignored", None, score, "couldn't see your eyes"))
             continue
-        raw_med = np.median(looks, axis=0)
-        gx, gy = raw_med + model.offset
+        gx, gy = np.median(np.array(looks), axis=0)
         if not (-100 < gx < canvas.width + 100 and -100 < gy < canvas.height + 100):
             events.append(("ignored", None, score, "you weren't looking at the screen"))
             continue
-        cell, conf = model.predict_cell([f for f, _ in win])
+        cell, conf = vote([model.cell_of(p) for p in looks])
+        raws = [r for ft, _, r, _ in frames if r is not None and t + TAP_WINDOW[0] <= ft <= t + TAP_WINDOW[1]]
+        raw_med = np.median(raws, axis=0) if raws else None
         events.append(("down" if conf >= MIN_TAP_CONFIDENCE else "reject", cell, conf, feat, raw_med))
     return _Live("hover" if live_cell is not None else "none", live_cell), events
 

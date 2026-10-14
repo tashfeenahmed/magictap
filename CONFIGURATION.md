@@ -251,3 +251,36 @@ magictap calibrate    # eyes + 3 touch rounds on a 4x3 grid -> picks the grid
 magictap taps         # tap sounds vs. your everyday noises
 magictap buttons      # look at a button, tap it
 ```
+
+
+## Accuracy update: pooled gaze mapper + per-session re-centre
+
+What changed after the 81 % (26/32) live session:
+
+- **Pooled gaze mapper:** `calibrate`/`retrain` train the eye mapping on every stored
+  eye calibration (look-only dots, plus touch-round gaze from cells-mode runs) in
+  `<data home>/calibration_runs`. The candidate is picked by leave-one-session-out
+  testing with a simulated re-centre on the held-out session. Eye-image variants are
+  preferred when within 10 % of the best; with 3 sessions that picked
+  "gaze ray + eye images" (148 pt median held-out).
+- **Re-centre (`magictap recenter`, 15 s):** 6 dots at the 3×2 cell centres. Each gives
+  (fixation gaze point, dot), an affine correction is fitted (median shift if fewer
+  than 4 dots), and it's saved to `<data home>/data/recenter.json`. `buttons`, `serve` and
+  `mouse` apply it to every gaze point and warn if it's missing or older than 4 h.
+- **Fixation-based selection:** samples in [t − 0.8 s, t + 0.05 s]; the most recent run
+  of ≥ 4 samples within 60 pt of its median; fallback [−0.30, +0.05] s.
+- **Confidence gate:** click only if ≥ 60 % of those samples vote for the same
+  cell, otherwise "not sure".
+- **Default grid capped at 3×2:** finer grids can pass the in-session test, but 3×2
+  is what's validated across sessions.
+
+`magictap evaluate-demo` on the recorded demo session (24 presses, 3×2, different day
+from calibration):
+
+| Setting | Right |
+|---|---|
+| Old single-session mapper, no re-centre | 9 / 24 |
+| Old single-session mapper, re-centre (affine) | 13 / 18 |
+| Pooled mapper, no re-centre | 11 / 24 |
+| Pooled mapper, re-centre (shift) | 17 / 18 |
+| **Pooled mapper, re-centre (affine)** | **18 / 18** |

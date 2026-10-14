@@ -108,8 +108,8 @@ def _framing_checks(obs):
     ]
 
 
-def wait_until_ready(app: App, title: str, lines: list[str]) -> None:
-    """Live camera view with a framing checklist; returns when the user presses Space."""
+def wait_until_ready(app: App, title: str, lines: list[str], keys=()) -> int:
+    """Live camera view with a framing checklist; returns the key pressed (Space, or one of `keys`)."""
     c = app.canvas
     while True:
         obs = app.step()
@@ -131,7 +131,7 @@ def wait_until_ready(app: App, title: str, lines: list[str]) -> None:
         text(img, "Press SPACE when you're ready   (Esc to quit)",
              (c.width / 2, c.height - 40), 0.8, (0, 220, 255), center=True)
         key = app.show(img)
-        if key == ord(" "):
-            return
+        if key == ord(" ") or key in keys:
+            return key
         if key == 27:
             raise KeyboardInterrupt
