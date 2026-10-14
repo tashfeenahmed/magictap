@@ -16,7 +16,7 @@ def run_preview(camera=None, video=None):
         from .model import TouchModel
 
         model = TouchModel.load()
-    app = App(camera=camera, video=video, window="holo preview", fullscreen=False)
+    app = App(camera=camera, video=video, window="Magic Tap - preview", fullscreen=False)
     writer = None
     print("Preview: R record clip, Q quit. Blue = body silhouette, yellow = skeleton, green = hands.")
     try:

@@ -27,10 +27,10 @@ def run_experiment(camera=None, cols=4, rows=3, radius=None, seed=None, reps=2):
         p90 = calib.report.get("final", {}).get("p90", 100)
         radius = int(np.clip(p90, 60, 200))
         print(f"Target radius {radius} pt (from calibration: 90% of touches within {p90:.0f} pt)")
-    app = App(camera=calib.camera_index if camera is None else camera, window="holo experiment")
+    app = App(camera=calib.camera_index if camera is None else camera, window="Magic Tap - experiment")
     c = app.canvas
     if (c.width, c.height) != tuple(calib.canvas_size):
-        print("Warning: screen size changed since calibration; re-run `holo calibrate`.")
+        print("Warning: screen size changed since calibration; re-run `magictap calibrate`.")
     engine = TouchEngine(model, calib.canvas_size)
     app.show_inset = False  # a camera view on screen pulls the eyes away from the target
     # Offset the grid from the calibration dots so we test positions the model never saw.
@@ -48,7 +48,7 @@ def run_experiment(camera=None, cols=4, rows=3, radius=None, seed=None, reps=2):
         wait_until_ready(app, "Click experiment", [
             "Sit the same way as during calibration.",
             f"{len(targets)} yellow circles will appear one at a time. Look at each one, touch it, hold still briefly.",
-            "The blue ring shows where holo thinks you're looking (G hides it).",
+            "The blue ring shows where Magic Tap thinks you're looking (G hides it).",
             "Can't reach one or it won't register? Press Space to skip it.",
         ])
         while k < len(targets):
@@ -115,7 +115,7 @@ def _draw(app, tf, targets, k, trials, flash, obs, radius):
     if k < len(targets):
         cv2.circle(img, pt(targets[k]), radius, (0, 220, 255), 2, cv2.LINE_AA)
         cv2.circle(img, pt(targets[k]), 6, (0, 220, 255), -1, cv2.LINE_AA)
-    if tf.gaze is not None and app.show_gaze:  # where holo thinks you're looking
+    if tf.gaze is not None and app.show_gaze:  # where Magic Tap thinks you're looking
         cv2.circle(img, pt(tf.gaze), 22, (255, 160, 60), 2, cv2.LINE_AA)
     if tf.state == "touch" and tf.point is not None:
         cv2.drawMarker(img, pt(tf.point), (0, 0, 255), cv2.MARKER_CROSS, 34, 3, cv2.LINE_AA)
@@ -187,7 +187,7 @@ def _heatmap(c, trials, summary, radius):
 
 
 # --------------------------------------------------------------------------
-# Cell mode: touch highlighted cells; count right / wrong / skipped-by-holo.
+# Cell mode: touch highlighted cells; count right / wrong / skipped-by-Magic Tap.
 # --------------------------------------------------------------------------
 
 def run_cell_experiment(calib, camera=None, reps=2, seed=None):
@@ -196,7 +196,7 @@ def run_cell_experiment(calib, camera=None, reps=2, seed=None):
     from .touch import CellTouchEngine
 
     model = CellModel.load()
-    app = App(camera=calib.camera_index if camera is None else camera, window="holo experiment")
+    app = App(camera=calib.camera_index if camera is None else camera, window="Magic Tap - experiment")
     c = app.canvas
     engine = CellTouchEngine(model)
     app.show_inset = False  # a camera view on screen pulls the eyes away from the target
@@ -211,7 +211,7 @@ def run_cell_experiment(calib, camera=None, reps=2, seed=None):
         wait_until_ready(app, "Cell experiment", [
             f"The screen is a {model.cols} x {model.rows} grid. One cell at a time lights up yellow.",
             "Look at it and touch it anywhere inside (centre is best), then lift your hand.",
-            "Green flash = right cell, red = wrong cell, grey = holo wasn't sure and didn't click (try again).",
+            "Green flash = right cell, red = wrong cell, grey = Magic Tap wasn't sure and didn't click (try again).",
             "Can't get one? Press Space to skip it.",
         ])
         while k < len(order):
@@ -236,7 +236,7 @@ def run_cell_experiment(calib, camera=None, reps=2, seed=None):
             img = c.blank(18)
             draw_grid(img, (model.cols, model.rows), highlight=order[k] if k < len(order) else None,
                       fill=(0, 150, 200))
-            if cf.state == "hover" and cf.cell is not None:  # where holo thinks you're heading
+            if cf.state == "hover" and cf.cell is not None:  # where Magic Tap thinks you're heading
                 r, col = divmod(cf.cell, model.cols)
                 cw, ch = c.width / model.cols, c.height / model.rows
                 cv2.rectangle(img, (int(col * cw) + 6, int(r * ch) + 6), (int((col + 1) * cw) - 6, int((r + 1) * ch) - 6),
@@ -251,7 +251,7 @@ def run_cell_experiment(calib, camera=None, reps=2, seed=None):
             wrong = sum(t["result"] == "wrong" for t in trials)
             text(img, f"target {min(k + 1, len(order))}/{len(order)}   right {right}   wrong {wrong}   not sure {rejects}"
                       f"   touch prob {cf.p_touch:.2f}   fps {app.fps:.0f}", (c.width / 2, 24), 0.55, center=True)
-            text(img, "Touch the yellow cell.  Blue outline = where holo thinks you're heading.  [Space] skip  "
+            text(img, "Touch the yellow cell.  Blue outline = where Magic Tap thinks you're heading.  [Space] skip  "
                       "[I] camera  [Esc] finish", (c.width / 2, c.height - 20), 0.5, (170, 170, 170), 1, center=True)
             app.inset(img, avoid=model.centre(order[k]) if k < len(order) else None)
             key = app.show(img)

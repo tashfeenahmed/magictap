@@ -1,8 +1,8 @@
-"""Button board: big on-screen buttons on the best grid holo has learned, with live
+"""Button board: big on-screen buttons on the best grid Magic Tap has learned, with live
 right/wrong feedback and a summary of what calibration found.
 
-Guided mode (default): holo asks you to touch a button and marks the result.
-Free mode (F): touch any button; press Y if holo got it right, N if not.
+Guided mode (default): Magic Tap asks you to touch a button and marks the result.
+Free mode (F): touch any button; press Y if Magic Tap got it right, N if not.
 """
 
 import collections
@@ -34,16 +34,16 @@ def _summary_lines(calib, model):
     g = f"{model.cols}x{model.rows}"
     gr = r["grids"][g]
     eyes = r["eyes"]["check_dots"]["median"]
-    return [f"What holo learned:  eyes accurate to ~{eyes:.0f} pt  |  touch vs. no touch {100 * gr['touch_vs_rest_accuracy']:.0f}%"
+    return [f"What Magic Tap learned:  eyes accurate to ~{eyes:.0f} pt  |  touch vs. no touch {100 * gr['touch_vs_rest_accuracy']:.0f}%"
             f"  |  {g} buttons: {100 * gr['accuracy']:.0f}% right on test touches ({gr['model']})"]
 
 
 def run_buttons(camera=None, seed=None):
     calib = Calibration.load()
     if calib.report.get("mode") != "cells":
-        raise SystemExit("Buttons need a cell calibration: run `uv run holo calibrate` (or `holo retrain`).")
+        raise SystemExit("Buttons need a cell calibration: run `magictap calibrate` (or `magictap retrain`).")
     model = CellModel.load()
-    app = App(camera=calib.camera_index if camera is None else camera, window="holo buttons")
+    app = App(camera=calib.camera_index if camera is None else camera, window="Magic Tap - buttons")
     app.show_inset = False  # a camera view on screen would pull your eyes off the buttons
     c = app.canvas
     use_taps = TAP_MODEL_PATH.exists()
@@ -70,8 +70,8 @@ def run_buttons(camera=None, seed=None):
             f"{n} big buttons ({model.cols} x {model.rows}), sized from what calibration found works best.",
             "Look at a button and TAP the screen on it: the tap sound says WHEN, your eyes say WHICH button."
             if use_taps else "Look at a button and touch it, holding still briefly.",
-            "Guided: touch the button holo asks for; it marks right / wrong.",
-            "Free (press F): touch any button, then press Y if holo got it right or N if not.",
+            "Guided: touch the button Magic Tap asks for; it marks right / wrong.",
+            "Free (press F): touch any button, then press Y if Magic Tap got it right or N if not.",
         ])
         while True:
             obs = app.step()
@@ -83,7 +83,7 @@ def run_buttons(camera=None, seed=None):
                 stages["sounds heard"] += len(events)
                 events = [e for e in events if e[0] != "ignored"]
                 if guided and learner:
-                    for e in events:  # you were asked to tap `ask`, so each tap teaches holo
+                    for e in events:  # you were asked to tap `ask`, so each tap teaches Magic Tap
                         learner.add(ask, feat=e[3], gaze=e[4])
             else:
                 cf = engine.update(obs)

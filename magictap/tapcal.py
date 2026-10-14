@@ -29,7 +29,7 @@ from .config import DATA_DIR
 from .screen import main_canvas, open_fullscreen
 
 TAP_MODEL_PATH = DATA_DIR / "tap_model.joblib"
-WINDOW = "holo taps"
+WINDOW = "Magic Tap - taps"
 KEY_GATE_S = 0.15  # ignore sounds this close to a key press / trackpad click
 
 
@@ -235,7 +235,7 @@ def retrain_taps(run_dir=None):
     runs = sorted((DATA_DIR / "tap_runs").glob("*/sounds.npz"))
     path = Path(run_dir) / "sounds.npz" if run_dir else (runs[-1] if runs else None)
     if path is None or not path.exists():
-        raise SystemExit("No saved tap recordings. Run `uv run holo taps` first.")
+        raise SystemExit("No saved tap recordings. Run `magictap taps` first.")
     d = np.load(path)
     events = [{"clip": c, "label": str(l), "key_near": bool(k), "gentle": bool(g)}
               for c, l, k, g in zip(d["clips"], d["labels"], d["keyed"], d["gentle"])]
@@ -320,10 +320,13 @@ class TapDetector:
 
     def __init__(self):
         if not TAP_MODEL_PATH.exists():
-            raise SystemExit("No tap model yet. Run `uv run holo taps` first.")
+            raise SystemExit("No tap model yet. Run `magictap taps` first.")
+        from . import legacy_unpickle_aliases
+
+        legacy_unpickle_aliases()
         self.model = joblib.load(TAP_MODEL_PATH)
         if not isinstance(self.model, TapModel):
-            raise SystemExit("Tap model is from an older version. Run `uv run holo taps --retrain`.")
+            raise SystemExit("Tap model is from an older version. Run `magictap taps --retrain`.")
         self.mic = Mic()
 
     def poll(self):

@@ -137,7 +137,7 @@ CELL_WINDOW_S = 0.4  # frames averaged when deciding which cell was touched
 @dataclass
 class CellFrame:
     state: str  # "none" | "hover" | "touch"
-    cell: int | None  # cell being touched, or the cell holo thinks you're heading for
+    cell: int | None  # cell being touched, or the cell Magic Tap thinks you're heading for
     confidence: float
     events: list = field(default_factory=list)  # [("down" | "up" | "reject", cell, confidence)]
     p_touch: float = 0.0

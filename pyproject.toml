@@ -1,7 +1,7 @@
 [project]
-name = "holo"
-version = "0.1.0"
-description = "Turn a MacBook screen into a touchscreen using the built-in camera and a mirror"
+name = "magictap"
+version = "0.2.0"
+description = "Touch input for a MacBook screen with no touchscreen: your eyes pick the button, the tap sound says when."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -18,10 +18,14 @@ dependencies = [
     "scipy>=1.18.1",
     "timm>=1.0.30",
     "torch>=2.14.1",
+    "websockets>=17.2",
 ]
 
 [project.scripts]
-holo = "holo.cli:main"
+magictap = "magictap.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["magictap"]
 
 [build-system]
 requires = ["hatchling"]

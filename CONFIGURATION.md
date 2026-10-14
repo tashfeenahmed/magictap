@@ -5,7 +5,7 @@ This is the exact setup that produced the working **look-and-tap buttons**: your
 It uses only the MacBook's built-in camera and microphone, with no mirror and no
 extra hardware.
 
-Snapshot: 2026-10-14, holo 0.1.0.
+Snapshot: 2026-10-14, Magic Tap 0.1.0.
 
 ---
 
@@ -25,10 +25,10 @@ Snapshot: 2026-10-14, holo 0.1.0.
 |---|---|
 | Machine | MacBook Pro, Apple M4 Max, macOS 26.5 |
 | Display | Built-in 3456×2234 Retina, **1728×1117 pt**. Fullscreen canvas = **1728×1085 pt** (32 pt notch inset at the top) |
-| Camera | Built-in "MacBook Pro Camera", **1760×1328 (4:3)** at 30 fps. Center Stage **off** (holo turns it off). Max available is 1920 px wide |
+| Camera | Built-in "MacBook Pro Camera", **1760×1328 (4:3)** at 30 fps. Center Stage **off** (Magic Tap turns it off). Max available is 1920 px wide |
 | Microphone | Built-in "MacBook Pro Microphone", **48 kHz mono**, ~61 ms input latency |
 | Position | Sit as you will use it. Lid tilted so **shoulders and elbows are in view**. Keep the lid angle and seat the same after calibrating |
-| Permissions (terminal app) | Camera, Microphone. Accessibility only for `holo live` |
+| Permissions (terminal app) | Camera, Microphone. Accessibility only for `magictap live` |
 | Python | 3.12 via `uv` |
 | Key packages | mediapipe 1.1.0, opencv-python 5.0.0.93, torch 2.14.1 (MPS), timm 1.0.30, scikit-learn 1.9.1, numpy 2.5.4, sounddevice 0.5.6, pyobjc |
 
@@ -109,7 +109,7 @@ microphone ─ onset detector (adaptive noise floor)
      on the screen (within 100 pt of its edges).
 
 ### Learning while you use it (guided mode)
-Idea from the devarshh08 fork. In guided mode holo knows which button you were asked
+Idea from the devarshh08 fork. In guided mode Magic Tap knows which button you were asked
 for, so every tap is a labelled example:
 - **Tap model:** each heard guided tap is added (most recent **40** kept) and the
   model is refitted every 5 taps. New taps come from the aligned detector, so the
@@ -123,7 +123,7 @@ for, so every tap is a labelled example:
 
 Both steps open a screen that waits for **Space**. **P** pauses and **Esc** quits.
 
-### 4a. Eyes + touch rounds: `uv run holo calibrate` (~6 min, cells mode)
+### 4a. Eyes + touch rounds: `magictap calibrate` (~6 min, cells mode)
 1. **Position check:** live camera view; checklist must show body, shoulders,
    elbows and eyes OK.
 2. **Eyes:** look at **20 dots** (5×4 grid, 1.6 s each, first 0.6 s ignored).
@@ -148,7 +148,7 @@ Both steps open a screen that waits for **Space**. **P** pauses and **Esc** quit
 | **3×2** | **eyes + touch shift** | **100%** |
 | 2×2 | eyes only | 94% |
 
-### 4b. Taps: `uv run holo taps` (~2 min)
+### 4b. Taps: `magictap taps` (~2 min)
 1. Tap **22 dots** on the screen: 14 firm, then 8 gentle.
 2. **Typing** 15 s, **talking** 10 s, **other sounds** 20 s (desk knocks, claps,
    palm-rest taps, trackpad clicks, setting things down), **media** 15 s (optional),
@@ -166,7 +166,7 @@ Both steps open a screen that waits for **Space**. **P** pauses and **Esc** quit
 ## 5. Using it
 
 ```sh
-uv run holo buttons    # 3x2 look-and-tap buttons, with right/wrong feedback
+magictap buttons    # 3x2 look-and-tap buttons, with right/wrong feedback
 ```
 - **Guided mode:** a button lights up blue. Look at it and tap the screen on it.
   It flashes green "RIGHT" or red "WRONG". Grey "not sure" means no click.
@@ -179,12 +179,12 @@ Other commands:
 
 | Command | Purpose |
 |---|---|
-| `uv run holo preview` | Check framing; shows skeleton, silhouette and eyes |
-| `uv run holo calibrate` | Eyes + touch-round calibration (cells mode). `--grid 4x3 --rounds 3` |
-| `uv run holo taps` | Tap-sound training. `--retrain` refits from the last saved recording |
-| `uv run holo retrain [run]` | Retrain from a saved calibration recording, no new session |
-| `uv run holo experiment` | Grid experiment using the body-posture touch trigger (superseded by `buttons`) |
-| `uv run holo live` | Drive the real mouse (needs Accessibility; uses the body trigger, not taps yet) |
+| `magictap preview` | Check framing; shows skeleton, silhouette and eyes |
+| `magictap calibrate` | Eyes + touch-round calibration (cells mode). `--grid 4x3 --rounds 3` |
+| `magictap taps` | Tap-sound training. `--retrain` refits from the last saved recording |
+| `magictap retrain [run]` | Retrain from a saved calibration recording, no new session |
+| `magictap experiment` | Grid experiment using the body-posture touch trigger (superseded by `buttons`) |
+| `magictap live` | Drive the real mouse (needs Accessibility; uses the body trigger, not taps yet) |
 
 ## 6. Parameters
 
@@ -206,7 +206,7 @@ Other commands:
 | Head-movement dots | 3×2, 4 s | `HEAD_DOT_TIME` |
 | Touch capture | 1.0 s | `config.HOLD_TIME` |
 | Not-touching phase | 8 s | `config.REST_TIME` |
-| Chosen grid | 3×2 | `data/calibration.json` → `chosen_grid` |
+| Chosen grid | 3×2 | `~/Library/Application Support/MagicTap/data/calibration.json` → `chosen_grid` |
 | Touch shift | (+0.7, +187.1) pt, subtracted | `data/cell_model.joblib` → `offset` |
 
 The last two changes (shorter gaze window and the 0.6 floor) came after the 26/32
@@ -218,7 +218,7 @@ low-confidence guesses.
 
 | File | Contents |
 |---|---|
-| `data/calibration.json` | Mode `cells`, chosen grid, all scores |
+| `~/Library/Application Support/MagicTap/data/calibration.json` | Mode `cells`, chosen grid, all scores |
 | `data/cell_model.joblib` | Gaze mapper, touch shift, 3×2 cell model |
 | `data/tap_model.joblib` | Tap classifier and threshold |
 | `data/calibration_runs/20261013-235058/` | The calibration used: full-res video, every frame's features, dataset, report |
@@ -246,8 +246,8 @@ low-confidence guesses.
 
 ```sh
 uv sync
-uv run holo preview      # tilt the lid until shoulders, elbows and eyes are tracked
-uv run holo calibrate    # eyes + 3 touch rounds on a 4x3 grid -> picks the grid
-uv run holo taps         # tap sounds vs. your everyday noises
-uv run holo buttons      # look at a button, tap it
+magictap preview      # tilt the lid until shoulders, elbows and eyes are tracked
+magictap calibrate    # eyes + 3 touch rounds on a 4x3 grid -> picks the grid
+magictap taps         # tap sounds vs. your everyday noises
+magictap buttons      # look at a button, tap it
 ```

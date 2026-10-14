@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Magic Tap - web example</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; color: #fff; font-family: -apple-system, system-ui, sans-serif; }
+  #grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 18px; padding: 18px; height: 100vh; box-sizing: border-box; }
+  .btn { border: 1.5px solid #2a2a2a; border-radius: 32px; display: flex; align-items: center; justify-content: center;
+         font-size: 44px; font-weight: 600; transition: background .15s, border-color .15s; }
+  .btn.hit { background: #2bff8a33; border-color: #2bff8a; }
+  #status { position: fixed; left: 24px; bottom: 18px; font: 14px ui-monospace, Menlo, monospace; color: #8a8a8a; }
+  #start { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #000c; font-size: 22px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="grid">
+  <div class="btn" id="A">A</div><div class="btn" id="B">B</div><div class="btn" id="C">C</div>
+  <div class="btn" id="D">D</div><div class="btn" id="E">E</div><div class="btn" id="F">F</div>
+</div>
+<div id="status">connecting to magictap serve…</div>
+<div id="start">Click to go fullscreen, then look at a button and tap the screen on it.</div>
+<script type="module">
+  import { connect, screenRect } from "./magictap.js";
+
+  const status = document.getElementById("status");
+  const buttons = [...document.querySelectorAll(".btn")];
+  const mt = connect();
+
+  // Tell Magic Tap where the buttons are (global screen points). Re-send on resize / fullscreen.
+  const register = () => mt.setTargets(buttons.map((b) => ({ id: b.id, ...screenRect(b) })));
+  window.addEventListener("resize", register);
+  document.addEventListener("fullscreenchange", () => setTimeout(register, 300));
+
+  mt.on("open", () => { status.textContent = "connected"; register(); });
+  mt.on("close", () => { status.textContent = "not connected - run `magictap serve`"; });
+  mt.on("tap", (tap) => {
+    status.textContent = `tap → ${tap.target ?? "outside buttons"} (confidence ${tap.confidence})`;
+    const b = document.getElementById(tap.target);
+    if (b) { b.classList.add("hit"); setTimeout(() => b.classList.remove("hit"), 600); }
+  });
+  mt.on("ignored", (m) => { status.textContent = `ignored sound: ${m.reason}`; });
+
+  document.getElementById("start").onclick = async (e) => {
+    e.currentTarget.remove();
+    await document.documentElement.requestFullscreen().catch(() => {});
+  };
+</script>
+</body>
+</html>

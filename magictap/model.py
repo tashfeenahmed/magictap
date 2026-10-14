@@ -242,7 +242,10 @@ class TouchModel:
     @staticmethod
     def load(path=MODEL_PATH) -> "TouchModel":
         if not path.exists():
-            raise SystemExit("No trained model. Run `uv run holo calibrate` first.")
+            raise SystemExit("No trained model. Run `magictap calibrate` first.")
+        from . import legacy_unpickle_aliases
+
+        legacy_unpickle_aliases()
         return joblib.load(path)
 
 
@@ -452,7 +455,10 @@ class CellModel:
     @staticmethod
     def load(path=CELL_MODEL_PATH) -> "CellModel":
         if not path.exists():
-            raise SystemExit("No cell model. Run `uv run holo calibrate` first.")
+            raise SystemExit("No cell model. Run `magictap calibrate` first.")
+        from . import legacy_unpickle_aliases
+
+        legacy_unpickle_aliases()
         return joblib.load(path)
 
 

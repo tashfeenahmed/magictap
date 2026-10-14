@@ -1,9 +1,12 @@
 """Paths and default tuning values."""
 
+import os
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-MODELS_DIR = ROOT / "models"
+# Per-user home for models, calibration and recordings, so an installed `magictap`
+# works from any directory. Override with MAGICTAP_HOME.
+HOME = Path(os.environ.get("MAGICTAP_HOME", Path.home() / "Library" / "Application Support" / "MagicTap")).expanduser()
+MODELS_DIR = HOME / "models"
 _MP = "https://storage.googleapis.com/mediapipe-models"
 POSE_MODEL = (MODELS_DIR / "pose_landmarker_full.task",
               f"{_MP}/pose_landmarker/pose_landmarker_full/float16/latest/pose_landmarker_full.task")
@@ -14,7 +17,7 @@ FACE_MODEL = (MODELS_DIR / "face_landmarker.task",
 # ETH-XGaze ResNet-18 gaze model trained by hysts (ptgaze), on the Hugging Face Hub
 GAZE_WEIGHTS = (MODELS_DIR / "eth_xgaze_resnet18.safetensors", ("hysts/ptgaze-eth-xgaze-resnet18", "model.safetensors"))
 
-DATA_DIR = ROOT / "data"
+DATA_DIR = HOME / "data"
 CALIBRATION_PATH = DATA_DIR / "calibration.json"
 MODEL_PATH = DATA_DIR / "touch_model.joblib"
 CELL_MODEL_PATH = DATA_DIR / "cell_model.joblib"

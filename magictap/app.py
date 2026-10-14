@@ -28,7 +28,7 @@ def pt(p):
 
 
 class App:
-    def __init__(self, camera=None, video=None, window="holo", fullscreen=True):
+    def __init__(self, camera=None, video=None, window="Magic Tap", fullscreen=True):
         self.window = window
         self.canvas = main_canvas()
         if video:

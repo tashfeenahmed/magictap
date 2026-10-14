@@ -2,11 +2,11 @@
 
 import numpy as np
 
-from holo.body import N_KP_FEATURES, N_MASK_FEATURES, BodyObs, features
-from holo.calibration import grid_targets
-from holo.config import MASK_H, MASK_W
-from holo.model import TouchModel
-from holo.touch import TouchEngine
+from magictap.body import N_KP_FEATURES, N_MASK_FEATURES, BodyObs, features
+from magictap.calibration import grid_targets
+from magictap.config import MASK_H, MASK_W
+from magictap.model import TouchModel
+from magictap.touch import TouchEngine
 
 
 def fake_pose(rng, reach=(0.5, 0.5)):
@@ -42,7 +42,7 @@ def synthetic_dataset(seed=0, w=1728, h=1085):
 
 
 def synthetic_gaze(targets, n, rng, noise=0.01, group_offset=0, w=1728, h=1085):
-    from holo.gaze import N_GEO_FEATURES, N_PATCH_FEATURES
+    from magictap.gaze import N_GEO_FEATURES, N_PATCH_FEATURES
     X, Y, G = [], [], []
     for g, t in enumerate(targets):
         for _ in range(n):
@@ -150,7 +150,7 @@ class FakeCellModel:
 
 
 def test_cell_engine_clicks_confident_cell():
-    from holo.touch import CellTouchEngine
+    from magictap.touch import CellTouchEngine
     eng = CellTouchEngine(FakeCellModel(0.9))
     ev = []
     for i in range(10):
@@ -159,7 +159,7 @@ def test_cell_engine_clicks_confident_cell():
 
 
 def test_cell_engine_refuses_when_unsure():
-    from holo.touch import CellTouchEngine
+    from magictap.touch import CellTouchEngine
     eng = CellTouchEngine(FakeCellModel(0.3))
     ev = []
     for i in range(10):
@@ -168,7 +168,7 @@ def test_cell_engine_refuses_when_unsure():
 
 
 def test_cell_model_learns_cells_from_eyes_and_arm():
-    from holo.model import CellModel, fit_gaze_mapper, joint_features
+    from magictap.model import CellModel, fit_gaze_mapper, joint_features
     rng = np.random.default_rng(0)
     w, h = 1728, 1085
     mapper, name, check, _ = fit_gaze_mapper(synthetic_gaze(grid_targets(w, h, 5, 4), 20, rng),
@@ -193,7 +193,7 @@ def test_cell_model_learns_cells_from_eyes_and_arm():
 
 
 def _clip(kind, rng):
-    from holo.audio import HOP, SR, WIN_AFTER, WIN_BEFORE
+    from magictap.audio import HOP, SR, WIN_AFTER, WIN_BEFORE
     n = (WIN_BEFORE + WIN_AFTER) * HOP
     t = np.arange(n) / SR
     x = rng.normal(0, 1e-4, n)
@@ -210,8 +210,8 @@ def _clip(kind, rng):
 
 
 def test_tap_classifier_separates_taps_from_noise():
-    from holo.audio import tap_features
-    from holo.tapcal import train
+    from magictap.audio import tap_features
+    from magictap.tapcal import train
     rng = np.random.default_rng(0)
     events = [{"label": "tap", "clip": _clip("tap", rng), "key_near": False, "gentle": i > 15} for i in range(22)]
     events += [{"label": "typing", "clip": _clip("typing", rng), "key_near": i % 3 != 0} for i in range(30)]
@@ -228,7 +228,7 @@ def test_tap_classifier_separates_taps_from_noise():
 
 
 def test_onset_detector_aligns_taps_to_the_sample():
-    from holo.audio import HOP, PRE, SR, OnsetDetector
+    from magictap.audio import HOP, PRE, SR, OnsetDetector
     rng = np.random.default_rng(1)
     x = rng.normal(0, 3e-4, SR * 3).astype(np.float32)
     onsets = [int(SR * 1.6) + 37, int(SR * 2.2) + 311]  # anywhere inside a 10 ms block
@@ -245,7 +245,7 @@ def test_onset_detector_aligns_taps_to_the_sample():
 
 
 def test_steady_noise_never_triggers_the_detector():
-    from holo.audio import HOP, SR, OnsetDetector
+    from magictap.audio import HOP, SR, OnsetDetector
     rng = np.random.default_rng(2)
     t = np.arange(SR * 4) / SR
     x = (0.01 * np.sin(2 * np.pi * 220 * t) + rng.normal(0, 2e-3, len(t))).astype(np.float32)  # hum + hiss

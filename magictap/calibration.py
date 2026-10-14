@@ -50,7 +50,7 @@ class Calibration:
     @classmethod
     def load(cls, path=CALIBRATION_PATH) -> "Calibration":
         if not path.exists():
-            raise SystemExit("No calibration found. Run `uv run holo calibrate` first.")
+            raise SystemExit("No calibration found. Run `magictap calibrate` first.")
         d = json.loads(path.read_text())
         for k in ("canvas_size", "canvas_offset", "camera_size"):
             d[k] = tuple(d[k])
@@ -229,7 +229,7 @@ class Calibrator:
         self.screen([f"Not touching ({n})",
                      "For 8 seconds, keep your hands away from the screen.",
                      "Type a bit, rest your hands, lean back, shift around - any natural posture.",
-                     "This teaches holo what you look like when you're NOT touching."])
+                     "This teaches Magic Tap what you look like when you're NOT touching."])
         self.timed(REST_TIME, "rest", "Don't touch the screen", "Move naturally: type, rest, lean, shift around.",
                    lambda o: (o.features is not None and rest_X.append(o.features),
                               self.rest_motion.append(o.motion)))
@@ -400,7 +400,7 @@ def eye_calibration(cal, c, rng):
     cal.screen(["Part 1b: Eyes + head movement",
                 "Keep your eyes on the dot while you SLOWLY move your head and body:",
                 "lean left and right, forward and back - like you do when reaching for the screen.",
-                "This teaches holo that moving your head isn't the same as looking somewhere else."])
+                "This teaches Magic Tap that moving your head isn't the same as looking somewhere else."])
     head_pts = grid_targets(c.width, c.height, 3, 2, margin=0.15)
     rng.shuffle(head_pts)
     cal.gaze_dots(head_pts, "Eyes on the dot, move your head slowly", gaze_train, group_offset=500,
@@ -414,7 +414,7 @@ def eye_calibration(cal, c, rng):
 
 
 def run_calibration(camera=None, seed=None, auto=False, touch_samples=2):
-    app = App(camera=camera, window="holo calibrate")
+    app = App(camera=camera, window="Magic Tap - calibrate")
     run_dir = RUNS_DIR / time.strftime("%Y%m%d-%H%M%S")
     rec = Recorder(run_dir)
     cal = Calibrator(app, rec, auto)
@@ -534,7 +534,7 @@ def _show_summary(app, r, lines):
             cv2.line(img, pt(t), pt(p), colour, 1, cv2.LINE_AA)
             cv2.circle(img, pt(p), 4, colour, -1)
     y = h / 2 - 20 * len(lines)
-    for line in lines + ["Circle = real dot, line = holo's estimate (blue: eye check dots, green: touch dots). "
+    for line in lines + ["Circle = real dot, line = Magic Tap's estimate (blue: eye check dots, green: touch dots). "
                          "Press any key."]:
         text(img, line, (w / 2, y), 0.55, center=True)
         y += 28
@@ -551,7 +551,7 @@ EVAL_GRIDS = [(4, 3), (3, 3), (3, 2), (2, 2)]
 def run_cell_calibration(camera=None, cols=4, rows=3, rounds=3, seed=None):
     from .model import joint_features
 
-    app = App(camera=camera, window="holo calibrate")
+    app = App(camera=camera, window="Magic Tap - calibrate")
     run_dir = RUNS_DIR / time.strftime("%Y%m%d-%H%M%S")
     rec = Recorder(run_dir)
     cal = Calibrator(app, rec)
