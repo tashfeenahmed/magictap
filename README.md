@@ -1,10 +1,29 @@
+<div align="center">
+
 # Magic Tap
 
-**Touch input for a MacBook screen that has no touchscreen.** Your eyes pick the
-button; the sound of your tap says when. Magic Tap uses only the built-in camera
-and microphone: no mirror, no extra hardware.
+**Touch input for a laptop screen that has no touchscreen.**<br>
+Your eyes pick the button. The sound of your tap says when.<br>
+Only your laptop's built-in camera and microphone, with no extra hardware.
 
-![Gaze and tap localization](docs/gaze-and-tap-localization.png)
+[![License: MIT](https://img.shields.io/badge/license-MIT-black.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000000.svg?logo=apple&logoColor=white)](#requirements)
+[![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-required-555555.svg)](#requirements)
+[![Extra hardware: none](https://img.shields.io/badge/extra%20hardware-none-2ea44f.svg)](#how-it-works)
+[![Tests](https://github.com/tashfeenahmed/magictap/actions/workflows/tests.yml/badge.svg)](https://github.com/tashfeenahmed/magictap/actions/workflows/tests.yml)
+[![Last commit](https://img.shields.io/github/last-commit/tashfeenahmed/magictap.svg)](https://github.com/tashfeenahmed/magictap/commits/main)
+[![Stars](https://img.shields.io/github/stars/tashfeenahmed/magictap.svg?style=social)](https://github.com/tashfeenahmed/magictap/stargazers)
+
+[Quickstart](#quickstart) · [Integrate](#integrate-it) · [How it works](#how-it-works) · [Results](#results-so-far-one-user-not-a-controlled-study) · [Troubleshooting](#troubleshooting)
+
+<br>
+
+<img src="docs/gaze-and-tap-localization.png" alt="A person looks at one of six on-screen zones and taps the laptop screen on it: the camera tracks the gaze (where), the microphone hears the tap (when)" width="820">
+
+<sub>The camera follows your gaze to find <b>where</b>; the microphone hears the tap to know <b>when</b>.</sub>
+
+</div>
 
 ## Quickstart
 
@@ -33,8 +52,9 @@ uv run magictap buttons
 
 ### Requirements
 
-- A MacBook with Apple Silicon, using its built-in camera and microphone
-  (developed on an M4 Max MacBook Pro), macOS 14 or later
+- A Mac laptop with Apple Silicon and its built-in camera and microphone, macOS 14
+  or later (developed on an M4 Max). Optimized for laptops: it relies on the camera
+  sitting just above the screen.
 - Python 3.12 (`uv` installs it for you)
 - Permissions for your terminal app, in **System Settings > Privacy & Security**:
   - **Camera** and **Microphone**: always needed

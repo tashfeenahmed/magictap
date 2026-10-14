@@ -1,7 +1,7 @@
 [project]
 name = "magictap"
 version = "0.2.0"
-description = "Touch input for a MacBook screen with no touchscreen: your eyes pick the button, the tap sound says when."
+description = "Touch input for a laptop screen with no touchscreen: your eyes pick the button, the tap sound says when."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

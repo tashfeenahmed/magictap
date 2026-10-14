@@ -2,7 +2,7 @@
 
 This is the exact setup that produced the working **look-and-tap buttons**: your
 **eyes** pick the button, and the **sound of your tap** on the screen says when.
-It uses only the MacBook's built-in camera and microphone, with no mirror and no
+It uses only the laptop's built-in camera and microphone, with no mirror and no
 extra hardware.
 
 Snapshot: 2026-10-14, Magic Tap 0.1.0.
@@ -23,7 +23,7 @@ Snapshot: 2026-10-14, Magic Tap 0.1.0.
 
 | Item | Setting |
 |---|---|
-| Machine | MacBook Pro, Apple M4 Max, macOS 26.5 |
+| Machine | Laptop with Apple M4 Max, macOS 26.5 |
 | Display | Built-in 3456×2234 Retina, **1728×1117 pt**. Fullscreen canvas = **1728×1085 pt** (32 pt notch inset at the top) |
 | Camera | Built-in "MacBook Pro Camera", **1760×1328 (4:3)** at 30 fps. Center Stage **off** (Magic Tap turns it off). Max available is 1920 px wide |
 | Microphone | Built-in "MacBook Pro Microphone", **48 kHz mono**, ~61 ms input latency |
