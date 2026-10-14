@@ -13,7 +13,6 @@ Only your laptop's built-in camera and microphone, with no extra hardware.
 [![Extra hardware: none](https://img.shields.io/badge/extra%20hardware-none-2ea44f.svg)](#how-it-works)
 [![Tests](https://github.com/tashfeenahmed/magictap/actions/workflows/tests.yml/badge.svg)](https://github.com/tashfeenahmed/magictap/actions/workflows/tests.yml)
 [![Last commit](https://img.shields.io/github/last-commit/tashfeenahmed/magictap.svg)](https://github.com/tashfeenahmed/magictap/commits/main)
-[![Stars](https://img.shields.io/github/stars/tashfeenahmed/magictap.svg?style=social)](https://github.com/tashfeenahmed/magictap/stargazers)
 
 [Quickstart](#quickstart) · [Integrate](#integrate-it) · [How it works](#how-it-works) · [Results](#results-so-far-one-user-not-a-controlled-study) · [Troubleshooting](#troubleshooting)
 
